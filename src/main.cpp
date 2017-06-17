@@ -92,12 +92,20 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
+          Eigen::VectorXd ptsx_eigen(ptsx.size());
+          Eigen::VectorXd ptsy_eigen(ptsy.size());
+          // contruct new eigen vectors for holding the waypoints
+          for (int i = 0; i < ptsx.size(); i++) {
+            ptsx_eigen(i) = ptsx[i];
+            ptsy_eigen(i) = ptsy[i];
+          }
+          auto coeffs = polyfit(ptsx, ptsy, 1);
+          double cte = polyeval(coeffs, px) - py;
+          double epsi = psi - atan(coeffs[1]);
+
+          Eigen::VectorXd state(6);
+          state << x, y, psi, v, cte, epsi;
+
           double steer_value;
           double throttle_value;
 
