@@ -16,6 +16,7 @@ using json = nlohmann::json;
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
+const double Lf = 2.67;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -35,7 +36,7 @@ string hasData(string s) {
 // Evaluate a polynomial.
 double polyeval(Eigen::VectorXd coeffs, double x) {
   double result = 0.0;
-  for (int i = 0; i < coeffs.size(); i++) {
+  for (unsigned i = 0; i < coeffs.size(); i++) {
     result += coeffs[i] * pow(x, i);
   }
   return result;
@@ -50,11 +51,11 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   assert(order >= 1 && order <= xvals.size() - 1);
   Eigen::MatrixXd A(xvals.size(), order + 1);
 
-  for (int i = 0; i < xvals.size(); i++) {
+  for (unsigned i = 0; i < xvals.size(); i++) {
     A(i, 0) = 1.0;
   }
 
-  for (int j = 0; j < xvals.size(); j++) {
+  for (unsigned j = 0; j < xvals.size(); j++) {
     for (int i = 0; i < order; i++) {
       A(j, i + 1) = A(j, i) * xvals(j);
     }
@@ -94,20 +95,23 @@ int main() {
 
           Eigen::VectorXd ptsx_eigen(ptsx.size());
           Eigen::VectorXd ptsy_eigen(ptsy.size());
-          // contruct new eigen vectors for holding the waypoints
-          for (int i = 0; i < ptsx.size(); i++) {
-            ptsx_eigen(i) = ptsx[i];
-            ptsy_eigen(i) = ptsy[i];
+          // contruct new eigen vectors for holding the waypoints, and shift by 90 degs
+          for (unsigned i = 0; i < ptsx.size(); i++) {
+            ptsx_eigen(i) = (ptsx[i] - px) * cos(0 - psi) - (ptsy[i] - py) * sin(0 - psi);
+            ptsy_eigen(i) = (ptsx[i] - px) * sin(0 - psi) + (ptsy[i] - py) * cos(0 - psi);
           }
-          auto coeffs = polyfit(ptsx, ptsy, 1);
+          auto coeffs = polyfit(ptsx_eigen, ptsy_eigen, 3);
           double cte = polyeval(coeffs, px) - py;
-          double epsi = psi - atan(coeffs[1]);
+          double epsi = psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] * pow(px, 2));
 
           Eigen::VectorXd state(6);
-          state << x, y, psi, v, cte, epsi;
+          state << 0, 0, 0, v, cte, epsi;
 
-          double steer_value;
-          double throttle_value;
+          auto vars = mpc.Solve(state, coeffs);
+
+          double steer_value = - vars[0] / (deg2rad(25) * Lf);
+          // not considering delayed response at the moment
+          double throttle_value = vars[1];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -118,6 +122,14 @@ int main() {
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
+          for (unsigned i = 2; i < vars.size(); i++) {
+            if (i % 2 == 0) {
+              mpc_x_vals.push_back(vars[i]);
+            }
+            else {
+              mpc_y_vals.push_back(vars[i]);
+            }
+          }
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -128,6 +140,13 @@ int main() {
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
+
+          double poly_inc = 2.5;
+          int num_points = 20;
+          for (int i = 1; i < num_points; i++) {
+            next_x_vals.push_back(poly_inc * i);
+            next_y_vals.push_back(polyeval(coeffs, poly_inc * i));
+          }
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
