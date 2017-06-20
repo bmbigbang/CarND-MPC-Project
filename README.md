@@ -50,66 +50,34 @@ Self-Driving Car Engineer Nanodegree Program
 3. Compile: `cmake .. && make`
 4. Run it: `./mpc`.
 
-## Tips
+## Write up
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+* The waypoints of a path array, as well as position, velocity and angle are 
+  communicated with the program using uWebSockets. Initially, the received
+  coordinates are rotated such that the position across the road is y, as a function
+  of x.
+* The equations of motion for the car are shown below, with the consideration of
+  angle Lf as the transformation angle converting the static body of the car to a point
+  centred on the origin of the state coordinates:
+![alt text](equations.png)
+* The delay of 0.1s is then calculated based on the kinematic equations of motion
+  and the new state is used to find the best fit for a polynomial of third order, 
+  while minimising our cost function.
+* The cost function is optimised to take into account the values of most importance
+  and allow intuitive correction to the mathematical mismatches between
+  the model and the simulator. For example, one can drive the solution away from 
+  one of the oscillatory and large variations in the actuator angle and throttle, 
+  in order to encourage a smoother and more stable driving trajectory.
+* When considering the cost function, it is also important to take into account, 
+  the predicted state may well go outside the bound of the given
+  waypoint coordinates. The number of points in the predicted space is given by
+  N, set here as 10, and the separation between them dt, set here as 0.1s. Therefore
+  when driving at speeds above 100m/s, our predicted state will extend far beyond the 
+  given waypoints which are usually in a range of 40m), and may well start to fit 
+  inadequately to the given data.
+* The waypoints and predicted points are plotted in the simulator to assist optimising
+  these constants, costs and allow for a better accuracy.
+  
+Find below the videos showing the running simulator with this code:
+https://drive.google.com/open?id=0B8oLHWPlmk8iUFI2S1h1dWJGU1U
+https://drive.google.com/open?id=0B8oLHWPlmk8iVTd4el9BWHZsM2M
