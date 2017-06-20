@@ -95,17 +95,25 @@ int main() {
 
           Eigen::VectorXd ptsx_eigen(ptsx.size());
           Eigen::VectorXd ptsy_eigen(ptsy.size());
-          // contruct new eigen vectors for holding the waypoints, and shift by 90 degs
+          // contruct new eigen vectors for holding the waypoints, and swap and x and y coordinates
           for (unsigned i = 0; i < ptsx.size(); i++) {
             ptsx_eigen(i) = (ptsx[i] - px) * cos(0 - psi) - (ptsy[i] - py) * sin(0 - psi);
             ptsy_eigen(i) = (ptsx[i] - px) * sin(0 - psi) + (ptsy[i] - py) * cos(0 - psi);
           }
           auto coeffs = polyfit(ptsx_eigen, ptsy_eigen, 3);
+
+          // delay calculations
+          double del_t = 0.1;
+          double x11 = v  * cos((0 - psi) / 180.0) * del_t;
+          double y11 = v  * sin((0 - psi) / 180.0) * del_t;
+          double psi11 = v * (psi / 180.0) * del_t / Lf;
+
           double cte = polyeval(coeffs, px) - py;
-          double epsi = psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] * pow(px, 2));
+          // arctan of the derivative at point x11
+          double epsi = atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] * pow(px, 2));
 
           Eigen::VectorXd state(6);
-          state << 0, 0, 0, v, cte, epsi;
+          state << x11, y11, psi11, v, cte, epsi;
 
           auto vars = mpc.Solve(state, coeffs);
 

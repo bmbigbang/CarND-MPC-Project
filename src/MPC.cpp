@@ -21,7 +21,7 @@ double dt = 0.08;
 const double Lf = 2.67;
 
 // initialize reference velocity as a variable
-double ref_v = 45;
+double ref_v = 50;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -48,24 +48,23 @@ class FG_eval {
     // the Solver function below.
     fg[0] = 0;
 
-    // Reference State Cost
+    // Reference State Cost make sure the starting point actuation values are more important
     for (size_t t = 0; t < N; t++) {
-      fg[0] += 1000 * CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += 1000 * CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += pow(N - t, 3) * CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += pow(N - t, 3) * CppAD::pow(vars[epsi_start + t], 2);
       fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
     for (size_t t = 0; t < N - 1; t++) {
-      fg[0] += 5 * CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += 5 * CppAD::pow(vars[a_start + t], 2);
+      fg[0] += 7 * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += 7 * CppAD::pow(vars[a_start + t], 2);
     }
 
     // Minimize the value gap between sequential actuations. add a weight of sum of delta's to increase the importance
-    AD<double> sum_a = vars[delta_start];
     for (size_t t = 0; t < N - 2; t++) {
-      fg[0] += 100 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += 30 * sum_a * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 140 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += 20 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     // Setup Constraints
